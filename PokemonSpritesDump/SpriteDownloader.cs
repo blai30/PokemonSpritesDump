@@ -5,6 +5,10 @@ using PokemonSpritesDump.Models;
 
 namespace PokemonSpritesDump;
 
+/// <summary>
+/// A background service that downloads Pokémon sprites from Pokémon HOME API.
+/// Manages caching of API responses and image files to minimize redundant network requests.
+/// </summary>
 public class SpriteDownloader : BackgroundService
 {
     private readonly HttpClient _httpClient;
@@ -21,6 +25,12 @@ public class SpriteDownloader : BackgroundService
     private const string SpritesDirectory = "out/sprites";
     private const string CacheDirectory = "out/cache";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SpriteDownloader"/> class.
+    /// </summary>
+    /// <param name="logger">Logger for recording operation information and errors.</param>
+    /// <param name="httpClient">HTTP client for API requests and sprite downloads.</param>
+    /// <param name="options">Configuration options for the download process.</param>
     public SpriteDownloader(ILogger<SpriteDownloader> logger, HttpClient httpClient, IOptions<ApiOptions> options)
     {
         _logger = logger;
@@ -35,6 +45,12 @@ public class SpriteDownloader : BackgroundService
         Directory.CreateDirectory(CacheDirectory);
     }
 
+    /// <summary>
+    /// Executes the sprite download process as a background service.
+    /// Builds a slug map and downloads all sprites according to configuration.
+    /// </summary>
+    /// <param name="stoppingToken">Cancellation token to stop the background service.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
@@ -60,6 +76,12 @@ public class SpriteDownloader : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Builds a mapping of Pokémon IDs to form slugs used in sprite naming.
+    /// </summary>
+    /// <param name="config">Download configuration settings.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A dictionary mapping Pokémon IDs to their form slug names.</returns>
     private async Task<Dictionary<int, List<string>>> BuildSlugMapAsync(DownloadConfig config,
         CancellationToken stoppingToken)
     {
@@ -80,6 +102,12 @@ public class SpriteDownloader : BackgroundService
         return slugMap;
     }
 
+    /// <summary>
+    /// Fetches the list of Pokémon species from the PokeAPI.
+    /// </summary>
+    /// <param name="config">Download configuration defining offset and limit.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A list of Pokémon species resources.</returns>
     private async Task<List<NamedApiResource>> FetchSpeciesListAsync(DownloadConfig config,
         CancellationToken stoppingToken)
     {
@@ -92,6 +120,12 @@ public class SpriteDownloader : BackgroundService
         return JsonSerializer.Deserialize<NamedApiResourceList>(speciesListJson)!.Results;
     }
 
+    /// <summary>
+    /// Fetches detailed Pokémon data including species, base Pokémon data, and forms.
+    /// </summary>
+    /// <param name="speciesList">List of species to fetch data for.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A tuple containing mappings of species, Pokémon, and a list of forms.</returns>
     private async Task<(Dictionary<string, PokemonSpecies> Species,
         Dictionary<string, Pokemon> Pokemons,
         List<PokemonForm> Forms)> FetchPokemonDataAsync(
@@ -124,6 +158,13 @@ public class SpriteDownloader : BackgroundService
         return (speciesMap, pokemonMap, forms);
     }
 
+    /// <summary>
+    /// Processes Pokémon form data to build a comprehensive slug map for sprite naming.
+    /// </summary>
+    /// <param name="speciesMap">Dictionary mapping species names to their data.</param>
+    /// <param name="pokemonMap">Dictionary mapping Pokémon names to their data.</param>
+    /// <param name="forms">List of Pokémon form data.</param>
+    /// <param name="slugMap">Dictionary to populate with ID to slug mappings.</param>
     private void ProcessFormsIntoSlugMap(
         Dictionary<string, PokemonSpecies> speciesMap,
         Dictionary<string, Pokemon> pokemonMap,
@@ -148,6 +189,13 @@ public class SpriteDownloader : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Determines the appropriate form name based on species, Pokémon, and form data.
+    /// </summary>
+    /// <param name="species">The species data.</param>
+    /// <param name="pokemon">The Pokémon data.</param>
+    /// <param name="form">The form data.</param>
+    /// <returns>The appropriate form name to use in sprite filenames.</returns>
     private string DetermineFormName(PokemonSpecies species, Pokemon pokemon, PokemonForm form)
     {
         bool isDefaultForm = (pokemon.IsDefault && pokemon.Name == form.Name) ||
@@ -156,6 +204,13 @@ public class SpriteDownloader : BackgroundService
         return isDefaultForm ? species.Name : form.Name;
     }
 
+    /// <summary>
+    /// Caches the generated slug map to disk for future use.
+    /// </summary>
+    /// <param name="slugMap">The slug mapping to cache.</param>
+    /// <param name="config">Download configuration containing offset and limit info.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task CacheSlugMapAsync(
         Dictionary<int, List<string>> slugMap,
         DownloadConfig config,
@@ -168,6 +223,13 @@ public class SpriteDownloader : BackgroundService
             stoppingToken);
     }
 
+    /// <summary>
+    /// Coordinates the download of all sprite images based on the slug map.
+    /// </summary>
+    /// <param name="slugMap">Mapping of Pokémon IDs to form slugs.</param>
+    /// <param name="config">Download configuration.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task DownloadAllSpritesAsync(
         Dictionary<int, List<string>> slugMap,
         DownloadConfig config,
@@ -186,6 +248,12 @@ public class SpriteDownloader : BackgroundService
         await ProcessDownloadBatchesAsync(downloadBatches, slugMap, stoppingToken);
     }
 
+    /// <summary>
+    /// Creates download work items based on the slug map and configuration.
+    /// </summary>
+    /// <param name="slugMap">Mapping of Pokémon IDs to form slugs.</param>
+    /// <param name="config">Download configuration including offset, limit, and brute force settings.</param>
+    /// <returns>A list of sprite download items to process.</returns>
     private List<SpriteDownloadItem> CreateDownloadBatches(
         Dictionary<int, List<string>> slugMap,
         DownloadConfig config)
@@ -212,6 +280,13 @@ public class SpriteDownloader : BackgroundService
         return result;
     }
 
+    /// <summary>
+    /// Processes download items in batches to manage system resources.
+    /// </summary>
+    /// <param name="downloadItems">The list of items to download.</param>
+    /// <param name="slugMap">Mapping of Pokémon IDs to form slugs.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ProcessDownloadBatchesAsync(
         List<SpriteDownloadItem> downloadItems,
         Dictionary<int, List<string>> slugMap,
@@ -239,6 +314,13 @@ public class SpriteDownloader : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Processes a single batch of sprite download items.
+    /// </summary>
+    /// <param name="batch">The batch of items to download.</param>
+    /// <param name="slugMap">Mapping of Pokémon IDs to form slugs.</param>
+    /// <param name="stoppingToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ProcessDownloadBatchAsync(
         List<SpriteDownloadItem> batch,
         Dictionary<int, List<string>> slugMap,
@@ -250,6 +332,15 @@ public class SpriteDownloader : BackgroundService
         await Task.WhenAll(downloadTasks);
     }
 
+    /// <summary>
+    /// Downloads a single sprite image for a specific Pokémon form and style.
+    /// </summary>
+    /// <param name="dexNum">The Pokedex number of the Pokemon.</param>
+    /// <param name="formNum">The form number/index.</param>
+    /// <param name="styleNum">The style number/index.</param>
+    /// <param name="slugDictionary">Dictionary mapping Pokémon IDs to form slugs.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task DownloadSpriteAsync(
         int dexNum, int formNum, int styleNum,
         Dictionary<int, List<string>> slugDictionary,
@@ -292,6 +383,16 @@ public class SpriteDownloader : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Builds a filename for a sprite based on Pokémon data and form information.
+    /// </summary>
+    /// <param name="dexId">The formatted Pokedex ID.</param>
+    /// <param name="formId">The formatted form ID.</param>
+    /// <param name="styleId">The formatted style ID.</param>
+    /// <param name="formNum">The form number/index.</param>
+    /// <param name="slugDictionary">Dictionary mapping Pokémon IDs to form slugs.</param>
+    /// <param name="dexNum">The Pokedex number.</param>
+    /// <returns>The full path for the sprite file.</returns>
     private string BuildSpriteFileName(
         string dexId, string formId, string styleId,
         int formNum, Dictionary<int, List<string>> slugDictionary, int dexNum)
@@ -305,6 +406,15 @@ public class SpriteDownloader : BackgroundService
             : Path.Combine(SpritesDirectory, $"sprite_{dexId}_{formSlug}_s{styleId}.png");
     }
 
+    /// <summary>
+    /// Fetches image bytes for a sprite, with caching support.
+    /// </summary>
+    /// <param name="dexId">The formatted Pokedex ID.</param>
+    /// <param name="formId">The formatted form ID.</param>
+    /// <param name="styleId">The formatted style ID.</param>
+    /// <param name="imageUrl">The URL to fetch the image from.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The image bytes or empty array if not found.</returns>
     private async Task<byte[]> FetchImageBytesAsync(
         string dexId, string formId, string styleId,
         string imageUrl, CancellationToken cancellationToken)
@@ -339,7 +449,13 @@ public class SpriteDownloader : BackgroundService
         return imageBytes;
     }
 
-    public async Task<string> GetCachedApiResponseAsync(string url, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Gets API response with caching (memory and disk).
+    /// </summary>
+    /// <param name="url">The API URL to fetch.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The API response as a string.</returns>
+    private async Task<string> GetCachedApiResponseAsync(string url, CancellationToken cancellationToken = default)
     {
         // Check memory cache first
         if (_memoryCache.TryGetValue(url, out string? cachedResponse))
@@ -380,6 +496,15 @@ public class SpriteDownloader : BackgroundService
         return apiContent;
     }
 
+    /// <summary>
+    /// Processes API requests in batches to avoid overwhelming the API.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize the API response into.</typeparam>
+    /// <param name="urls">The list of URLs to process.</param>
+    /// <param name="getCachedApiResponseAsync">Function to get API responses with caching.</param>
+    /// <param name="batchSize">Size of each processing batch (default: 20).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of deserialized objects from the API responses.</returns>
     private async Task<List<T>> ProcessInBatchesAsync<T>(
         IReadOnlyList<string> urls,
         Func<string, Task<string>> getCachedApiResponseAsync,
@@ -413,6 +538,18 @@ public class SpriteDownloader : BackgroundService
         return resultArray.Where(item => !EqualityComparer<T>.Default.Equals(item, default!)).ToList();
     }
 
+    /// <summary>
+    /// Creates a batch of tasks for processing API URLs.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize the API response into.</typeparam>
+    /// <param name="urls">The list of URLs to process.</param>
+    /// <param name="resultArray">Array to store the results in.</param>
+    /// <param name="failedUrls">Collection to track failed URL operations.</param>
+    /// <param name="batchStart">Starting index for the batch.</param>
+    /// <param name="batchSize">Size of the batch.</param>
+    /// <param name="getCachedApiResponseAsync">Function to get API responses with caching.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of tasks for the batch.</returns>
     private List<Task> CreateBatchTasks<T>(
         IReadOnlyList<string> urls,
         T[] resultArray,
@@ -453,6 +590,13 @@ public class SpriteDownloader : BackgroundService
             .ToList();
     }
 
+    /// <summary>
+    /// Logs progress information for batch processing.
+    /// </summary>
+    /// <param name="currentBatch">The index of the current batch.</param>
+    /// <param name="totalBatches">The total number of batches.</param>
+    /// <param name="processedCount">The number of items processed so far.</param>
+    /// <param name="totalCount">The total number of items to process.</param>
     private void LogBatchProgress(int currentBatch, int totalBatches, int processedCount, int totalCount)
     {
         _logger.LogInformation(
@@ -460,6 +604,10 @@ public class SpriteDownloader : BackgroundService
             currentBatch, totalBatches, processedCount, totalCount);
     }
 
+    /// <summary>
+    /// Logs information about URLs that failed to process.
+    /// </summary>
+    /// <param name="failedUrls">Collection of URLs that failed with error messages.</param>
     private void LogFailedUrls(ConcurrentBag<(string Url, string Error)> failedUrls)
     {
         if (failedUrls.IsEmpty) return;
@@ -476,7 +624,19 @@ public class SpriteDownloader : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Represents configuration for the download process.
+    /// </summary>
+    /// <param name="Offset">Starting offset for Pokemon IDs.</param>
+    /// <param name="Limit">Maximum number of Pokémon to process.</param>
+    /// <param name="BruteForce">Whether to attempt downloading all possible form variations.</param>
     private record DownloadConfig(int Offset, int Limit, bool BruteForce);
 
+    /// <summary>
+    /// Represents a work item for downloading a specific sprite.
+    /// </summary>
+    /// <param name="DexNum">The Pokedex number.</param>
+    /// <param name="FormNum">The form number/index.</param>
+    /// <param name="StyleNum">The style number/index.</param>
     private record SpriteDownloadItem(int DexNum, int FormNum, int StyleNum);
 }
