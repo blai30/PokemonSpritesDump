@@ -2,7 +2,7 @@ namespace PokemonSpritesDump;
 
 public record ApiOptions
 {
-    public int? Limit { get; set; }
-    public int? Offset { get; set; }
-    public bool? BruteForce { get; set; }
+    public int? Limit { get; set; } = 151;
+    public int? Offset { get; set; } = 0;
+    public bool? BruteForce { get; set; } = false;
 }
