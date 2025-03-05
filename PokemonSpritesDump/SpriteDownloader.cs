@@ -45,49 +45,10 @@ public class SpriteDownloader : BackgroundService
     {
         var slugMap = new Dictionary<int, List<string>> { { 0, ["egg"] } };
 
-        int offset = _options.Value.Offset ?? 0;
-        int limit = _options.Value.Limit ?? 151;
-
-        _logger.LogInformation("Fetching species list with offset={Offset}, limit={Limit}", offset, limit);
-
-        string speciesListJson = await FetchFromApiAsync(
-            $"https://pokeapi.co/api/v2/pokemon-species?offset={offset}&limit={limit}", stoppingToken);
-        var speciesList = JsonSerializer.Deserialize<NamedApiResourceList>(speciesListJson)!.Results;
-
-        _logger.LogInformation("Fetching species details for {Count} species", speciesList.Count);
-        var speciesUrls = speciesList.Select(specie => specie.Url).ToList();
-        var speciesJson =
-            await ProcessInBatchesAsync(speciesUrls, url => FetchFromApiAsync(url, stoppingToken), BatchSize,
-                stoppingToken);
-        var speciesMap = speciesJson
-            .Select(json => JsonSerializer.Deserialize<PokemonSpecies>(json)!)
-            .ToDictionary(specie => specie.Name);
-
-        _logger.LogInformation("Fetching Pokemon details for {Count} Pokemon", speciesList.Count);
-        var pokemonUrls = speciesMap.Values
-            .SelectMany(specie => specie.Varieties!.Select(variant => variant.Pokemon.Url))
-            .ToList();
-        var pokemonJson =
-            await ProcessInBatchesAsync(pokemonUrls, url => FetchFromApiAsync(url, stoppingToken), BatchSize,
-                stoppingToken);
-        var pokemonMap = pokemonJson
-            .Select(json => JsonSerializer.Deserialize<Pokemon>(json)!)
-            .ToDictionary(pokemon => pokemon.Name);
-
-        _logger.LogInformation("Fetching forms for {Count} Pokemon", pokemonMap.Count);
-        var formUrls = pokemonMap.Values
-            .SelectMany(pokemon => pokemon.Forms.Select(form => form.Url))
-            .ToList();
-        var formJson = await ProcessInBatchesAsync(formUrls, url => FetchFromApiAsync(url, stoppingToken), BatchSize,
-            stoppingToken);
-        var forms = formJson
-            .Select(json => JsonSerializer.Deserialize<PokemonForm>(json)!)
-            .ToList();
-
-        _logger.LogInformation("Processing {Count} species", speciesList.Count);
+        var (speciesMap, pokemonMap, forms) = await FetchPokemonDataAsync(stoppingToken);
+        _logger.LogInformation("Processing {Count} species", speciesMap.Count);
 
         // Process each species - simplified approach
-        int processed = 0;
         foreach (var form in forms)
         {
             var pokemon = pokemonMap[form.Pokemon!.Name];
@@ -103,17 +64,59 @@ public class SpriteDownloader : BackgroundService
                       (specie.Name == pokemon.Name && form.IsDefault)
                 ? specie.Name
                 : form.Name);
-
-            processed++;
-
-            if (processed % 10 == 0 || processed == speciesList.Count)
-                _logger.LogInformation("Processed {Processed}/{Total} species", processed, speciesList.Count);
         }
 
         return slugMap;
     }
 
-    // Keep other methods unchanged, just add these logging statements to FetchFromApiAsync
+    private async Task<(Dictionary<string, PokemonSpecies> SpeciesMap, Dictionary<string, Pokemon> PokemonMap,
+            List<PokemonForm> Forms)>
+        FetchPokemonDataAsync(CancellationToken stoppingToken)
+    {
+        int offset = _options.Value.Offset;
+        int limit = _options.Value.Limit;
+
+        _logger.LogInformation("Fetching species list with offset={Offset}, limit={Limit}", offset, limit);
+        string speciesListJson = await FetchFromApiAsync(
+            $"https://pokeapi.co/api/v2/pokemon-species?offset={offset}&limit={limit}", stoppingToken);
+        var speciesList = JsonSerializer.Deserialize<NamedApiResourceList>(speciesListJson)!.Results;
+
+        // Fetch details for each species
+        _logger.LogInformation("Fetching species details for {Count} species", speciesList.Count);
+        var speciesUrls = speciesList.Select(specie => specie.Url).ToList();
+        var speciesJson =
+            await ProcessInBatchesAsync(speciesUrls, url => FetchFromApiAsync(url, stoppingToken), BatchSize,
+                stoppingToken);
+        var speciesMap = speciesJson
+            .Select(json => JsonSerializer.Deserialize<PokemonSpecies>(json)!)
+            .ToDictionary(specie => specie.Name);
+
+        // Fetch Pokémon details from the species varieties
+        _logger.LogInformation("Fetching Pokemon details for {Count} Pokemon", speciesList.Count);
+        var pokemonUrls = speciesMap.Values
+            .SelectMany(specie => specie.Varieties!.Select(variant => variant.Pokemon.Url))
+            .ToList();
+        var pokemonJson =
+            await ProcessInBatchesAsync(pokemonUrls, url => FetchFromApiAsync(url, stoppingToken), BatchSize,
+                stoppingToken);
+        var pokemonMap = pokemonJson
+            .Select(json => JsonSerializer.Deserialize<Pokemon>(json)!)
+            .ToDictionary(pokemon => pokemon.Name);
+
+        // Fetch forms for each Pokémon
+        _logger.LogInformation("Fetching forms for {Count} Pokemon", pokemonMap.Count);
+        var formUrls = pokemonMap.Values
+            .SelectMany(pokemon => pokemon.Forms.Select(form => form.Url))
+            .ToList();
+        var formJson = await ProcessInBatchesAsync(formUrls, url => FetchFromApiAsync(url, stoppingToken), BatchSize,
+            stoppingToken);
+        var forms = formJson
+            .Select(json => JsonSerializer.Deserialize<PokemonForm>(json)!)
+            .ToList();
+
+        return (speciesMap, pokemonMap, forms);
+    }
+
     private async Task<string> FetchFromApiAsync(string url, CancellationToken cancellationToken)
     {
         // Check cache first
@@ -171,8 +174,12 @@ public class SpriteDownloader : BackgroundService
             cancellationToken.ThrowIfCancellationRequested();
 
             int currentBatch = i / batchSize + 1;
-            _logger.LogInformation("Processing batch {CurrentBatch}/{TotalBatches}"
-                , currentBatch, totalBatches);
+            int itemsInBatch = Math.Min(batchSize, itemsList.Count - i);
+            int processedItems = Math.Min(i + itemsInBatch, itemsList.Count);
+
+            _logger.LogInformation(
+                "Processing batch {CurrentBatch}/{TotalBatches} ({ProcessedItems}/{TotalItems} items)", currentBatch,
+                totalBatches, processedItems, itemsList.Count);
 
             var batch = itemsList.Skip(i).Take(batchSize).ToList();
             var batchTasks = batch.Select(processor);
@@ -186,9 +193,9 @@ public class SpriteDownloader : BackgroundService
 
     private List<DownloadItem> CreateDownloadItems(Dictionary<int, List<string>> slugMap)
     {
-        int offset = _options.Value.Offset ?? 0;
-        int limit = _options.Value.Limit ?? 151;
-        bool bruteForce = _options.Value.BruteForce ?? false;
+        int offset = _options.Value.Offset;
+        int limit = _options.Value.Limit;
+        bool bruteForce = _options.Value.BruteForce;
 
         var result = Enumerable.Range(offset, limit)
             .Where(slugMap.ContainsKey)
@@ -212,13 +219,13 @@ public class SpriteDownloader : BackgroundService
         _logger.LogInformation("Created {Count} download items", downloadItems.Count);
 
         // Use the universal batch processing method with void result (using Task<bool>)
-        await ProcessInBatchesAsync<DownloadItem, bool>(
+        await ProcessInBatchesAsync(
             downloadItems,
             async item =>
             {
                 await DownloadSpriteAsync(
                     item.DexNum, item.FormNum, item.StyleNum, slugMap, stoppingToken);
-                return true; // Dummy return value since we don't need results
+                return true;
             },
             BatchSize,
             stoppingToken);
