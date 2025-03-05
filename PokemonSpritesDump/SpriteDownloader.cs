@@ -118,14 +118,19 @@ public class SpriteDownloader : BackgroundService
     {
         // Check cache first
         if (_cache.TryGetValue(url, out string? cachedResponse))
+        {
+            _logger.LogDebug("Using memory-cached data for: {Url}", url);
             return cachedResponse;
+        }
 
         // Create disk cache filename
-        string cacheFile = Path.Combine(CacheDirectory, $"{url.GetHashCode()}.json");
+        string sanitizedUrl = string.Join("_", url.Split(Path.GetInvalidFileNameChars()));
+        string cacheFile = Path.Combine(CacheDirectory, $"{sanitizedUrl}.json");
 
         // Check disk cache
         if (File.Exists(cacheFile))
         {
+            _logger.LogDebug("Using disk-cached data for: {Url}", url);
             string content = await File.ReadAllTextAsync(cacheFile, cancellationToken);
             _cache[url] = content;
             return content;
@@ -245,11 +250,12 @@ public class SpriteDownloader : BackgroundService
             {
                 byte[] imageData = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                 await File.WriteAllBytesAsync(fileName, imageData, cancellationToken);
+                _logger.LogInformation("Downloaded {FileName}", fileName);
             }
         }
         catch
         {
-            // Silently ignore errors
+            _logger.LogTrace("Failed to download {FileName}", fileName);
         }
     }
 
