@@ -70,8 +70,8 @@ public class SpriteDownloader : BackgroundService
         // Process each species - simplified approach
         foreach (var form in forms)
         {
-            var pokemon = pokemonMap[form.Pokemon!.Name];
-            var specie = speciesMap[pokemon.Species.Name];
+            var pokemon = pokemonMap[form.Pokemon!.Name!];
+            var specie = speciesMap[pokemon.Species!.Name!];
 
             if (!slugMap.TryGetValue(specie.Id, out var slugs))
             {
@@ -80,10 +80,12 @@ public class SpriteDownloader : BackgroundService
             }
 
             slugs.Add(
-                (pokemon.IsDefault && pokemon.Name == form.Name)
-                || (specie.Name == pokemon.Name && form.IsDefault)
-                    ? specie.Name
-                    : form.Name
+                (
+                    ((bool)pokemon.IsDefault! && pokemon.Name == form.Name)
+                    || (specie.Name == pokemon.Name && (bool)form.IsDefault!)
+                        ? specie.Name
+                        : form.Name
+                )!
             );
         }
 
@@ -116,41 +118,41 @@ public class SpriteDownloader : BackgroundService
             .Results;
 
         // Fetch details for each species
-        _logger.LogInformation("Fetching species details for {Count} species", speciesList.Count);
+        _logger.LogInformation("Fetching species details for {Count} species", speciesList!.Count);
         var speciesUrls = speciesList.Select(specie => specie.Url).ToList();
         var speciesJson = await ProcessInBatchesAsync(
             speciesUrls,
-            url => FetchFromApiAsync(url, stoppingToken),
+            url => FetchFromApiAsync(url!, stoppingToken),
             BatchSize,
             stoppingToken
         );
         var speciesMap = speciesJson
             .Select(json => JsonSerializer.Deserialize<PokemonSpecies>(json)!)
-            .ToDictionary(specie => specie.Name);
+            .ToDictionary(specie => specie.Name!);
 
         // Fetch Pokémon details from the species varieties
         _logger.LogInformation("Fetching Pokemon details for {Count} Pokemon", speciesList.Count);
         var pokemonUrls = speciesMap
-            .Values.SelectMany(specie => specie.Varieties!.Select(variant => variant.Pokemon.Url))
+            .Values.SelectMany(specie => specie.Varieties!.Select(variant => variant.Pokemon!.Url))
             .ToList();
         var pokemonJson = await ProcessInBatchesAsync(
             pokemonUrls,
-            url => FetchFromApiAsync(url, stoppingToken),
+            url => FetchFromApiAsync(url!, stoppingToken),
             BatchSize,
             stoppingToken
         );
         var pokemonMap = pokemonJson
             .Select(json => JsonSerializer.Deserialize<Pokemon>(json)!)
-            .ToDictionary(pokemon => pokemon.Name);
+            .ToDictionary(pokemon => pokemon.Name!);
 
         // Fetch forms for each Pokémon
         _logger.LogInformation("Fetching forms for {Count} Pokemon", pokemonMap.Count);
         var formUrls = pokemonMap
-            .Values.SelectMany(pokemon => pokemon.Forms.Select(form => form.Url))
+            .Values.SelectMany(pokemon => pokemon.Forms!.Select(form => form.Url))
             .ToList();
         var formJson = await ProcessInBatchesAsync(
             formUrls,
-            url => FetchFromApiAsync(url, stoppingToken),
+            url => FetchFromApiAsync(url!, stoppingToken),
             BatchSize,
             stoppingToken
         );
@@ -291,10 +293,7 @@ public class SpriteDownloader : BackgroundService
 
         var imageUrl =
             $"https://resource.pokemon-home.com/battledata/img/pokei128/icon{dexId}_f{formId}_s{styleId}.png";
-        var imageCacheFile = Path.Combine(
-            CacheDirectory,
-            $"icon{dexId}_f{formId}_s{styleId}.png"
-        );
+        var imageCacheFile = Path.Combine(CacheDirectory, $"icon{dexId}_f{formId}_s{styleId}.png");
 
         var formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
         var extension = _imageConverter.GetFileExtension();

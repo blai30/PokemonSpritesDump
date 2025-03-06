@@ -14,7 +14,7 @@ public record PokemonSpecies
     public NamedApiResource? Color { get; init; }
 
     [JsonPropertyName("egg_groups")]
-    public List<NamedApiResource> EggGroups { get; init; }
+    public List<NamedApiResource>? EggGroups { get; init; }
 
     [JsonPropertyName("evolution_chain")]
     public ApiResource? EvolutionChain { get; init; }
@@ -29,7 +29,7 @@ public record PokemonSpecies
     public List<FormDescriptions>? FormDescriptions { get; init; }
 
     [JsonPropertyName("forms_switchable")]
-    public bool FormsSwitchable { get; init; }
+    public bool? FormsSwitchable { get; init; }
 
     [JsonPropertyName("gender_rate")]
     public int? GenderRate { get; init; }
@@ -47,25 +47,25 @@ public record PokemonSpecies
     public NamedApiResource? Habitat { get; init; }
 
     [JsonPropertyName("has_gender_differences")]
-    public bool HasGenderDifferences { get; init; }
+    public bool? HasGenderDifferences { get; init; }
 
     [JsonPropertyName("hatch_counter")]
     public int? HatchCounter { get; init; }
 
     [JsonPropertyName("id")]
-    public int Id { get; init; }
+    public int Id { get; init; } = 0;
 
     [JsonPropertyName("is_baby")]
-    public bool IsBaby { get; init; }
+    public bool? IsBaby { get; init; }
 
     [JsonPropertyName("is_legendary")]
-    public bool IsLegendary { get; init; }
+    public bool? IsLegendary { get; init; }
 
     [JsonPropertyName("is_mythical")]
-    public bool IsMythical { get; init; }
+    public bool? IsMythical { get; init; }
 
     [JsonPropertyName("name")]
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
     [JsonPropertyName("names")]
     public List<Names>? Names { get; init; }
@@ -101,7 +101,7 @@ public record FlavorTextEntries
 public record FormDescriptions
 {
     [JsonPropertyName("description")]
-    public string Description { get; init; }
+    public string? Description { get; init; }
 
     [JsonPropertyName("language")]
     public NamedApiResource? Language { get; init; }
@@ -110,7 +110,7 @@ public record FormDescriptions
 public record Genera
 {
     [JsonPropertyName("genus")]
-    public string Genus { get; init; }
+    public string? Genus { get; init; }
 
     [JsonPropertyName("language")]
     public NamedApiResource? Language { get; init; }
@@ -122,13 +122,13 @@ public record Names
     public NamedApiResource? Language { get; init; }
 
     [JsonPropertyName("name")]
-    public string Name { get; init; }
+    public string? Name { get; init; }
 }
 
 public record PokedexNumbers
 {
     [JsonPropertyName("entry_number")]
-    public int EntryNumber { get; init; }
+    public int? EntryNumber { get; init; }
 
     [JsonPropertyName("pokedex")]
     public NamedApiResource? Pokedex { get; init; }
@@ -137,8 +137,8 @@ public record PokedexNumbers
 public record Varieties
 {
     [JsonPropertyName("is_default")]
-    public bool IsDefault { get; init; }
+    public bool? IsDefault { get; init; }
 
     [JsonPropertyName("pokemon")]
-    public NamedApiResource Pokemon { get; init; }
+    public NamedApiResource? Pokemon { get; init; }
 }

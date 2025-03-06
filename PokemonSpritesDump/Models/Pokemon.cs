@@ -14,7 +14,7 @@ public record Pokemon
     public Cries? Cries { get; init; }
 
     [JsonPropertyName("forms")]
-    public List<NamedApiResource> Forms { get; init; }
+    public List<NamedApiResource>? Forms { get; init; }
 
     [JsonPropertyName("game_indices")]
     public List<NamedApiResource>? GameIndices { get; init; }
@@ -26,10 +26,10 @@ public record Pokemon
     public List<NamedApiResource>? HeldItems { get; init; }
 
     [JsonPropertyName("id")]
-    public int Id { get; init; }
+    public int? Id { get; init; }
 
     [JsonPropertyName("is_default")]
-    public bool IsDefault { get; init; }
+    public bool? IsDefault { get; init; }
 
     [JsonPropertyName("location_area_encounters")]
     public string? LocationAreaEncounters { get; init; }
@@ -38,7 +38,7 @@ public record Pokemon
     public List<Moves>? Moves { get; init; }
 
     [JsonPropertyName("name")]
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
     [JsonPropertyName("order")]
     public int? Order { get; init; }
@@ -50,7 +50,7 @@ public record Pokemon
     public List<NamedApiResource>? PastTypes { get; init; }
 
     [JsonPropertyName("species")]
-    public NamedApiResource Species { get; init; }
+    public NamedApiResource? Species { get; init; }
 
     [JsonPropertyName("sprites")]
     public Sprites? Sprites { get; init; }
@@ -71,10 +71,10 @@ public record Abilities
     public NamedApiResource? Ability { get; init; }
 
     [JsonPropertyName("is_hidden")]
-    public bool IsHidden { get; init; }
+    public bool? IsHidden { get; init; }
 
     [JsonPropertyName("slot")]
-    public int Slot { get; init; }
+    public int? Slot { get; init; }
 }
 
 public record Cries
@@ -92,13 +92,13 @@ public record Moves
     public NamedApiResource? Move { get; init; }
 
     [JsonPropertyName("version_group_details")]
-    public List<VersionGroupDetails> VersionGroupDetails { get; init; }
+    public List<VersionGroupDetails>? VersionGroupDetails { get; init; }
 }
 
 public record VersionGroupDetails
 {
     [JsonPropertyName("level_learned_at")]
-    public int LevelLearnedAt { get; init; }
+    public int? LevelLearnedAt { get; init; }
 
     [JsonPropertyName("move_learn_method")]
     public NamedApiResource? MoveLearnMethod { get; init; }
@@ -656,10 +656,10 @@ public record GenerationViii
 public record Stats
 {
     [JsonPropertyName("base_stat")]
-    public int BaseStat { get; init; }
+    public int? BaseStat { get; init; }
 
     [JsonPropertyName("effort")]
-    public int Effort { get; init; }
+    public int? Effort { get; init; }
 
     [JsonPropertyName("stat")]
     public NamedApiResource? Stat { get; init; }
@@ -668,7 +668,7 @@ public record Stats
 public record Types
 {
     [JsonPropertyName("slot")]
-    public int Slot { get; init; }
+    public int? Slot { get; init; }
 
     [JsonPropertyName("type")]
     public NamedApiResource? Type { get; init; }

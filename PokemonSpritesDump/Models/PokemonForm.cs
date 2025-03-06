@@ -5,7 +5,7 @@ namespace PokemonSpritesDump.Models;
 public record PokemonForm
 {
     [JsonPropertyName("form_name")]
-    public string FormName { get; init; }
+    public string? FormName { get; init; }
 
     [JsonPropertyName("form_names")]
     public List<Names>? FormNames { get; init; }
@@ -14,19 +14,19 @@ public record PokemonForm
     public int? FormOrder { get; init; }
 
     [JsonPropertyName("id")]
-    public int Id { get; init; }
+    public int? Id { get; init; }
 
     [JsonPropertyName("is_battle_only")]
-    public bool IsBattleOnly { get; init; }
+    public bool? IsBattleOnly { get; init; }
 
     [JsonPropertyName("is_default")]
-    public bool IsDefault { get; init; }
+    public bool? IsDefault { get; init; }
 
     [JsonPropertyName("is_mega")]
-    public bool IsMega { get; init; }
+    public bool? IsMega { get; init; }
 
     [JsonPropertyName("name")]
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
     [JsonPropertyName("names")]
     public List<Names>? Names { get; init; }

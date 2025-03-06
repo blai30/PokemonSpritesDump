@@ -5,7 +5,7 @@ namespace PokemonSpritesDump.Models;
 public record NamedApiResourceList
 {
     [JsonPropertyName("count")]
-    public int Count { get; init; }
+    public int? Count { get; init; }
 
     [JsonPropertyName("next")]
     public string? Next { get; init; }
@@ -14,20 +14,20 @@ public record NamedApiResourceList
     public string? Previous { get; init; }
 
     [JsonPropertyName("results")]
-    public List<NamedApiResource> Results { get; init; }
+    public List<NamedApiResource>? Results { get; init; }
 }
 
 public record NamedApiResource
 {
     [JsonPropertyName("name")]
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
     [JsonPropertyName("url")]
-    public string Url { get; init; }
+    public string? Url { get; init; }
 }
 
 public record ApiResource
 {
     [JsonPropertyName("url")]
-    public string Url { get; init; }
+    public string? Url { get; init; }
 }
