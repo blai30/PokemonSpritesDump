@@ -59,7 +59,7 @@ public record Pokemon
     public List<Stats>? Stats { get; init; }
 
     [JsonPropertyName("types")]
-    public List<Types> Types { get; init; }
+    public List<Types>? Types { get; init; }
 
     [JsonPropertyName("weight")]
     public int? Weight { get; init; }
