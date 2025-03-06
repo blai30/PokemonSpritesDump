@@ -11,5 +11,5 @@ public enum ImageFormat
 {
     Png,
     Jpg,
-    Webp
+    Webp,
 }

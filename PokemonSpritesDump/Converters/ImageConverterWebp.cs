@@ -6,8 +6,12 @@ public class ImageConverterWebp(ILogger<ImageConverterWebp> logger) : IImageConv
 {
     public string GetFileExtension() => ".webp";
 
-    public async Task<byte[]> ConvertToAsync(byte[] sourceData, int quality = 100, bool lossless = true,
-        CancellationToken stoppingToken = default)
+    public async Task<byte[]> ConvertToAsync(
+        byte[] sourceData,
+        int quality = 100,
+        bool lossless = true,
+        CancellationToken stoppingToken = default
+    )
     {
         using var image = Image.Load(sourceData);
         using var outputStream = new MemoryStream();
@@ -17,15 +21,20 @@ public class ImageConverterWebp(ILogger<ImageConverterWebp> logger) : IImageConv
             Quality = quality,
             FileFormat = lossless
                 ? SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossless
-                : SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy
+                : SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy,
         };
 
         await image.SaveAsWebpAsync(outputStream, encoder, stoppingToken);
         return outputStream.ToArray();
     }
 
-    public async Task SaveAsAsync(string outputPath, byte[] sourceData, int quality = 100, bool lossless = true,
-        CancellationToken stoppingToken = default)
+    public async Task SaveAsAsync(
+        string outputPath,
+        byte[] sourceData,
+        int quality = 100,
+        bool lossless = true,
+        CancellationToken stoppingToken = default
+    )
     {
         using var image = Image.Load(sourceData);
 
@@ -34,7 +43,7 @@ public class ImageConverterWebp(ILogger<ImageConverterWebp> logger) : IImageConv
             Quality = quality,
             FileFormat = lossless
                 ? SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossless
-                : SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy
+                : SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy,
         };
 
         await image.SaveAsWebpAsync(outputPath, encoder, stoppingToken);
