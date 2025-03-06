@@ -6,6 +6,7 @@ Console.WriteLine(Environment.ProcessId);
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddOptions<ApiOptions>().BindConfiguration("ApiOptions");
+builder.Services.AddOptions<ImageOptions>().BindConfiguration("ImageOptions");
 builder.Services.AddSingleton<HttpClient>();
 // builder.Services.AddHostedService<Worker>();
 builder.Services.AddHostedService<SpriteDownloader>();

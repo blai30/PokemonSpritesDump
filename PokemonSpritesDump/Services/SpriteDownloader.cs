@@ -11,20 +11,23 @@ public class SpriteDownloader : BackgroundService
     private const string CacheDirectory = "out/cache";
     private const int BatchSize = 20;
     private readonly ConcurrentDictionary<string, string> _cache = new();
-    private readonly HttpClient _httpClient;
     private readonly ILogger<SpriteDownloader> _logger;
-    private readonly IOptions<ApiOptions> _options;
+    private readonly IOptions<ApiOptions> _apiOptions;
+    private readonly IOptions<ImageOptions> _imageOptions;
+    private readonly HttpClient _httpClient;
     private readonly IImageConverter _imageConverter;
 
     public SpriteDownloader(
         ILogger<SpriteDownloader> logger,
+        IOptions<ApiOptions> apiOptions,
+        IOptions<ImageOptions> imageOptions,
         HttpClient httpClient,
-        IImageConverter imageConverter,
-        IOptions<ApiOptions> options)
+        IImageConverter imageConverter)
     {
         _logger = logger;
+        _apiOptions = apiOptions;
+        _imageOptions = imageOptions;
         _httpClient = httpClient;
-        _options = options;
         _imageConverter = imageConverter;
         _httpClient.Timeout = TimeSpan.FromMinutes(2);
 
@@ -46,8 +49,8 @@ public class SpriteDownloader : BackgroundService
 
     private async Task<Dictionary<int, List<string>>> BuildSlugMapAsync(CancellationToken stoppingToken)
     {
-        int offset = _options.Value.Offset;
-        int limit = _options.Value.Limit;
+        int offset = _apiOptions.Value.Offset;
+        int limit = _apiOptions.Value.Limit;
         string cacheFile = Path.Combine(CacheDirectory, $"slug_map_{offset}_{limit}.json");
 
         // Check cache
@@ -88,8 +91,8 @@ public class SpriteDownloader : BackgroundService
             List<PokemonForm> Forms)>
         FetchPokemonDataAsync(CancellationToken stoppingToken)
     {
-        int offset = _options.Value.Offset;
-        int limit = _options.Value.Limit;
+        int offset = _apiOptions.Value.Offset;
+        int limit = _apiOptions.Value.Limit;
 
         _logger.LogInformation("Fetching species list with offset={Offset}, limit={Limit}", offset, limit);
         string speciesListJson = await FetchFromApiAsync(
@@ -195,9 +198,9 @@ public class SpriteDownloader : BackgroundService
 
     private List<DownloadItem> CreateDownloadItems(Dictionary<int, List<string>> slugMap)
     {
-        int offset = _options.Value.Offset;
-        int limit = _options.Value.Limit;
-        bool bruteForce = _options.Value.BruteForce;
+        int offset = _apiOptions.Value.Offset;
+        int limit = _apiOptions.Value.Limit;
+        bool bruteForce = _apiOptions.Value.BruteForce;
 
         var result = Enumerable.Range(offset, limit)
             .Where(slugMap.ContainsKey)
@@ -266,7 +269,7 @@ public class SpriteDownloader : BackgroundService
             if (!string.IsNullOrEmpty(cachedImage))
             {
                 _logger.LogDebug("Using cached image: {CacheFile}", imageCacheFile);
-                imageData = await File.ReadAllBytesAsync(imageCacheFile, stoppingToken);
+                imageData = Convert.FromBase64String(cachedImage);
             }
             else
             {
@@ -288,7 +291,9 @@ public class SpriteDownloader : BackgroundService
             }
 
             // Convert and save as WebP
-            await _imageConverter.SaveAsAsync(fileName, imageData, stoppingToken: stoppingToken);
+            int quality = _imageOptions.Value.Quality;
+            bool lossless = _imageOptions.Value.Lossless;
+            await _imageConverter.SaveAsAsync(fileName, imageData, quality, lossless, stoppingToken: stoppingToken);
             _logger.LogInformation("Processed {FileName}", fileName);
         }
         catch (Exception ex)
