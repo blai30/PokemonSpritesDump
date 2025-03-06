@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using PokemonSpritesDump.Models;
 
-namespace PokemonSpritesDump;
+namespace PokemonSpritesDump.Services;
 
 public class SpriteDownloader : BackgroundService
 {
@@ -14,15 +14,18 @@ public class SpriteDownloader : BackgroundService
     private readonly HttpClient _httpClient;
     private readonly ILogger<SpriteDownloader> _logger;
     private readonly IOptions<ApiOptions> _options;
+    private readonly IImageConverter _imageConverter;
 
     public SpriteDownloader(
         ILogger<SpriteDownloader> logger,
         HttpClient httpClient,
+        IImageConverter imageConverter,
         IOptions<ApiOptions> options)
     {
         _logger = logger;
         _httpClient = httpClient;
         _options = options;
+        _imageConverter = imageConverter;
         _httpClient.Timeout = TimeSpan.FromMinutes(2);
 
         Directory.CreateDirectory(SpritesDirectory);
@@ -243,7 +246,10 @@ public class SpriteDownloader : BackgroundService
         string imageUrl =
             $"https://resource.pokemon-home.com/battledata/img/pokei128/icon{dexId}_f{formId}_s{styleId}.png";
 
-        string fileName = BuildFileName(dexId, formId, styleId, slugMap, dexNum, formNum);
+        string formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
+        string fileName = formNum == 0
+            ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}.webp")
+            : Path.Combine(SpritesDirectory, $"sprite_{dexId}_{formSlug}_s{styleId}.webp");
 
         // Skip if file exists
         if (File.Exists(fileName))
@@ -256,7 +262,8 @@ public class SpriteDownloader : BackgroundService
             if (response.IsSuccessStatusCode)
             {
                 byte[] imageData = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                await File.WriteAllBytesAsync(fileName, imageData, cancellationToken);
+                // await File.WriteAllBytesAsync(fileName, imageData, cancellationToken);
+                await _imageConverter.SaveAsAsync(fileName, imageData, cancellationToken: cancellationToken);
                 _logger.LogInformation("Downloaded {FileName}", fileName);
             }
         }
@@ -264,17 +271,6 @@ public class SpriteDownloader : BackgroundService
         {
             _logger.LogTrace("Failed to download {FileName}", fileName);
         }
-    }
-
-    private string BuildFileName(
-        string dexId, string formId, string styleId,
-        Dictionary<int, List<string>> slugMap, int dexNum, int formNum)
-    {
-        string formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
-
-        return formNum == 0
-            ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}.png")
-            : Path.Combine(SpritesDirectory, $"sprite_{dexId}_{formSlug}_s{styleId}.png");
     }
 
     private record DownloadItem(int DexNum, int FormNum, int StyleNum);

@@ -1,4 +1,4 @@
-namespace PokemonSpritesDump;
+namespace PokemonSpritesDump.Services;
 
 public class Worker : BackgroundService
 {
