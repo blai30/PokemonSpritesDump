@@ -5,7 +5,7 @@ namespace PokemonSpritesDump.Services;
 public class WebpImageConverter(ILogger<WebpImageConverter> logger) : IImageConverter
 {
     public async Task<byte[]> ConvertToAsync(byte[] sourceData, int quality = 100, bool lossless = true,
-        CancellationToken cancellationToken = default)
+        CancellationToken stoppingToken = default)
     {
         using var image = Image.Load(sourceData);
         using var outputStream = new MemoryStream();
@@ -18,12 +18,12 @@ public class WebpImageConverter(ILogger<WebpImageConverter> logger) : IImageConv
                 : SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy
         };
 
-        await image.SaveAsWebpAsync(outputStream, encoder, cancellationToken);
+        await image.SaveAsWebpAsync(outputStream, encoder, stoppingToken);
         return outputStream.ToArray();
     }
 
     public async Task SaveAsAsync(string outputPath, byte[] sourceData, int quality = 100, bool lossless = true,
-        CancellationToken cancellationToken = default)
+        CancellationToken stoppingToken = default)
     {
         using var image = Image.Load(sourceData);
 
@@ -35,7 +35,7 @@ public class WebpImageConverter(ILogger<WebpImageConverter> logger) : IImageConv
                 : SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy
         };
 
-        await image.SaveAsWebpAsync(outputPath, encoder, cancellationToken);
+        await image.SaveAsWebpAsync(outputPath, encoder, stoppingToken);
         logger.LogDebug("Saved webp image to {FilePath}", outputPath);
     }
 }
