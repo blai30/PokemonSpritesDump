@@ -244,6 +244,7 @@ public class SpriteDownloader : BackgroundService
 
         string imageUrl =
             $"https://resource.pokemon-home.com/battledata/img/pokei128/icon{dexId}_f{formId}_s{styleId}.png";
+        string imageCacheFile = Path.Combine(CacheDirectory, $"icon{dexId}_f{formId}_s{styleId}.png");
 
         string formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
         string fileName = formNum == 0
@@ -258,23 +259,43 @@ public class SpriteDownloader : BackgroundService
 
         try
         {
-            var response = await _httpClient.GetAsync(imageUrl, stoppingToken);
+            byte[] imageData;
 
-            if (response.IsSuccessStatusCode)
+            // Check if image exists in cache
+            string cachedImage = await GetCacheAsync(imageCacheFile, stoppingToken);
+            if (!string.IsNullOrEmpty(cachedImage))
             {
-                byte[] imageData = await response.Content.ReadAsByteArrayAsync(stoppingToken);
-                // await File.WriteAllBytesAsync(fileName, imageData, stoppingToken);
-                await _imageConverter.SaveAsAsync(fileName, imageData, stoppingToken: stoppingToken);
-                _logger.LogInformation("Downloaded {FileName}", fileName);
+                _logger.LogDebug("Using cached image: {CacheFile}", imageCacheFile);
+                imageData = await File.ReadAllBytesAsync(imageCacheFile, stoppingToken);
             }
+            else
+            {
+                // Download the image
+                var response = await _httpClient.GetAsync(imageUrl, stoppingToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogTrace("Failed to download image: {Url} (Status: {Status})",
+                        imageUrl, response.StatusCode);
+                    return;
+                }
+
+                imageData = await response.Content.ReadAsByteArrayAsync(stoppingToken);
+
+                // Cache the downloaded image
+                await WriteCacheAsync(imageCacheFile, Convert.ToBase64String(imageData), stoppingToken);
+                _logger.LogDebug("Cached image: {CacheFile}", imageCacheFile);
+            }
+
+            // Convert and save as WebP
+            await _imageConverter.SaveAsAsync(fileName, imageData, stoppingToken: stoppingToken);
+            _logger.LogInformation("Processed {FileName}", fileName);
         }
-        catch
+        catch (Exception ex)
         {
-            _logger.LogTrace("Failed to download {FileName}", fileName);
+            _logger.LogError(ex, "Error processing {FileName}", fileName);
         }
     }
-
-    private record DownloadItem(int DexNum, int FormNum, int StyleNum);
 
     private async Task<string> GetCacheAsync(string path, CancellationToken stoppingToken)
     {
@@ -299,4 +320,6 @@ public class SpriteDownloader : BackgroundService
         _cache[path] = content;
         await File.WriteAllTextAsync(path, content, stoppingToken);
     }
+
+    private record DownloadItem(int DexNum, int FormNum, int StyleNum);
 }
