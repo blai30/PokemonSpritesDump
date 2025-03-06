@@ -46,6 +46,26 @@ public class SpriteDownloader : BackgroundService
 
     private async Task<Dictionary<int, List<string>>> BuildSlugMapAsync(CancellationToken stoppingToken)
     {
+        int offset = _options.Value.Offset;
+        int limit = _options.Value.Limit;
+        string cacheFile = Path.Combine(CacheDirectory, $"slug_map_{offset}_{limit}.json");
+
+        // Check cache first
+        if (_cache.TryGetValue(cacheFile, out string? cachedResponse))
+        {
+            _logger.LogDebug("Using memory-cached data for: {File}", cacheFile);
+            return JsonSerializer.Deserialize<Dictionary<int, List<string>>>(cachedResponse)!;
+        }
+
+        // Check disk cache
+        if (File.Exists(cacheFile))
+        {
+            _logger.LogDebug("Using disk-cached slugMap: {File}", cacheFile);
+            string content = await File.ReadAllTextAsync(cacheFile, stoppingToken);
+            _cache[cacheFile] = content;
+            return JsonSerializer.Deserialize<Dictionary<int, List<string>>>(content)!;
+        }
+
         var slugMap = new Dictionary<int, List<string>> { { 0, ["egg"] } };
 
         var (speciesMap, pokemonMap, forms) = await FetchPokemonDataAsync(stoppingToken);
@@ -68,6 +88,9 @@ public class SpriteDownloader : BackgroundService
                 ? specie.Name
                 : form.Name);
         }
+
+        // Cache the slugMap for future use
+        await File.WriteAllTextAsync(cacheFile, JsonSerializer.Serialize(slugMap), stoppingToken);
 
         return slugMap;
     }
