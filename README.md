@@ -23,6 +23,8 @@
 ## Important things to know
 - This tool uses the [PokeAPI](https://pokeapi.co/) to capture `pokemon-species`, `pokemon`, and `pokemon-form` objects which are used to generate the filenames for the downloaded sprites.
   - This means that many web HTTP requests will be made, more than the specified limit as many Pokemon will have multiple forms.
+  - Some Pokemon such as Pikachu, Arceus, Kyurem, Vivillon, Necrozma, and possibly more, will have inaccurate filenames as the ordering of `pokemon-form` from PokeAPI does not necessarily match the Pokemon HOME CDN.
+    - Most should be accurate though including Unown, Gourgeist, Florges, Minior, Alcremie, most if not all mega evolutions, and possibly more.
 - This tool performs file-based caching, located in `./out/cache`.
   - This cache will be accessed on subsequent executions of this tool to prevent suffocating the PokeAPI and the Pokemon HOME CDN.
   - Delete this cache to call the API from a fresh slate.
