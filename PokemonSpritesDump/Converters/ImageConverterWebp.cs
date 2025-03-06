@@ -1,9 +1,11 @@
 using SixLabors.ImageSharp;
 
-namespace PokemonSpritesDump.Services;
+namespace PokemonSpritesDump.Converters;
 
-public class WebpImageConverter(ILogger<WebpImageConverter> logger) : IImageConverter
+public class ImageConverterWebp(ILogger<ImageConverterWebp> logger) : IImageConverter
 {
+    public string GetFileExtension() => ".webp";
+
     public async Task<byte[]> ConvertToAsync(byte[] sourceData, int quality = 100, bool lossless = true,
         CancellationToken stoppingToken = default)
     {

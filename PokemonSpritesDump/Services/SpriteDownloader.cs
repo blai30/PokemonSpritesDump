@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using PokemonSpritesDump.Converters;
 using PokemonSpritesDump.Models;
 
 namespace PokemonSpritesDump.Services;
@@ -250,9 +251,10 @@ public class SpriteDownloader : BackgroundService
         string imageCacheFile = Path.Combine(CacheDirectory, $"icon{dexId}_f{formId}_s{styleId}.png");
 
         string formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
+        string extension = _imageConverter.GetFileExtension();
         string fileName = formNum == 0
-            ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}.webp")
-            : Path.Combine(SpritesDirectory, $"sprite_{dexId}_{formSlug}_s{styleId}.webp");
+            ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}{extension}")
+            : Path.Combine(SpritesDirectory, $"sprite_{dexId}_{formSlug}_s{styleId}{extension}");
 
         if (File.Exists(fileName))
         {
