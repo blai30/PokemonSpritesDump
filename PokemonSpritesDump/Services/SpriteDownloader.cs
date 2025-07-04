@@ -17,6 +17,27 @@ public class SpriteDownloader : BackgroundService
     private readonly IOptions<ImageOptions> _imageOptions;
     private readonly HttpClient _httpClient;
     private readonly IImageConverter _imageConverter;
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
+
+    // id to species
+    private Dictionary<int, PokemonSpecies> _speciesIdMap = [];
+
+    // slug to species
+    private Dictionary<string, PokemonSpecies> _speciesMap = [];
+
+    // pokemon slug to pokemon
+    private Dictionary<string, Pokemon> _pokemonMap = [];
+
+    // form slug to pokemon form
+    private Dictionary<string, PokemonForm> _forms = [];
+
+    // species slug to pokemon list
+    private Dictionary<string, List<Pokemon>> _speciesPokemonMap = [];
+
+    // pokemon slug to form list
+    private Dictionary<string, List<PokemonForm>> _pokemonFormsMap = [];
+
+    private List<Task> _downloadTasks = [];
 
     public SpriteDownloader(
         ILogger<SpriteDownloader> logger,
@@ -39,67 +60,92 @@ public class SpriteDownloader : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await FetchPokemonDataAsync(stoppingToken);
         _logger.LogInformation("Starting sprite download process");
-        _logger.LogInformation("Building slug map...");
-        var slugMap = await BuildSlugMapAsync(stoppingToken);
-        _logger.LogInformation("Slug map built with {Count} entries", slugMap.Count);
+        var slugMap = BuildSlugMapAsync(stoppingToken);
 
         _logger.LogInformation("Downloading all sprites...");
         await DownloadAllSpritesAsync(slugMap, stoppingToken);
         _logger.LogInformation("Sprite download completed");
     }
 
-    private async Task<Dictionary<int, List<string>>> BuildSlugMapAsync(
-        CancellationToken stoppingToken
-    )
+    private async Task DownloadAllSpritesAsync(Dictionary<int, List<string>> slugMap, CancellationToken stoppingToken)
     {
-        var offset = _apiOptions.Value.Offset;
-        var limit = _apiOptions.Value.Limit;
-        var cacheFile = Path.Combine(CacheDirectory, $"slug_map_{offset}_{limit}.json");
-
-        // Check cache
-        var content = await GetCacheAsync(cacheFile, stoppingToken);
-        if (!string.IsNullOrEmpty(content))
-            return JsonSerializer.Deserialize<Dictionary<int, List<string>>>(content)!;
-
-        var slugMap = new Dictionary<int, List<string>> { { 0, ["egg"] } };
-
-        var (speciesMap, pokemonMap, forms) = await FetchPokemonDataAsync(stoppingToken);
-        _logger.LogInformation("Processing {Count} species", speciesMap.Count);
-
-        // Process each species - simplified approach
-        foreach (var form in forms)
+        for (var i = slugMap.Keys.Min(); i <= slugMap.Keys.Max(); i++)
         {
-            var pokemon = pokemonMap[form.Pokemon!.Name!];
-            var specie = speciesMap[pokemon.Species!.Name!];
+            stoppingToken.ThrowIfCancellationRequested();
 
-            if (!slugMap.TryGetValue(specie.Id, out var slugs))
+            if (!slugMap.TryGetValue(i, out var forms))
             {
-                slugs = [];
-                slugMap[specie.Id] = slugs;
+                _logger.LogWarning("No forms found for dex number {DexNum}", i);
+                continue;
             }
 
-            slugs.Add(
-                (
-                    ((bool)pokemon.IsDefault! && pokemon.Name == form.Name)
-                    || (specie.Name == pokemon.Name && (bool)form.IsDefault!)
-                        ? specie.Name
-                        : form.Name
-                )!
-            );
+            for (var j = 0; j < forms.Count; j++)
+            {
+                var formSlug = forms[j];
+                var form = formSlug != "egg" ? _forms[formSlug] : null;
+                var pokemon = formSlug != "egg" ? _pokemonMap[form!.Pokemon!.Name!] : null;
+                var isDefault = formSlug == "egg" || (bool)pokemon!.IsDefault! && (bool)form!.IsDefault!;
+
+                _downloadTasks.Add(DownloadSpriteAsync(
+                    isDefault,
+                    i,
+                    j,
+                    0,
+                    slugMap,
+                    stoppingToken
+                ));
+            }
         }
 
-        // Write cache
-        await WriteCacheAsync(cacheFile, JsonSerializer.Serialize(slugMap), stoppingToken);
+        await Task.WhenAll(_downloadTasks);
+    }
 
+    private Dictionary<int, List<string>> BuildSlugMapAsync(CancellationToken stoppingToken)
+    {
+        // Build a map with dex number as key and a list of form slugs as value.
+        var slugMap = new Dictionary<int, List<string>> { { 0, ["egg"] } };
+        foreach (var form in _forms.Values)
+        {
+            var pokemon = _pokemonMap[form.Pokemon!.Name!];
+            var species = _speciesMap[pokemon.Species!.Name!];
+            var dexNum = species.Id;
+
+            if (!slugMap.ContainsKey(dexNum))
+            {
+                slugMap[dexNum] = new List<string>();
+            }
+
+            // if ((bool)pokemon.IsDefault! && (bool)form.IsDefault!)
+            // {
+            //     slugMap[dexNum].Add(species.Name!);
+            // }
+            // else
+            // {
+                slugMap[dexNum].Add(form.Name!);
+            // }
+        }
+
+        // Use MapSorter.SlugOrdering to ensure correct order of applicable form slugs.
+        foreach (var (dexNum, slugs) in MapSorter.SlugOrdering)
+        {
+            if (slugMap.TryGetValue(dexNum, out var existingSlugs))
+            {
+                // Ensure the order of slugs matches the predefined order
+                slugMap[dexNum] = slugs.ToList();
+            }
+        }
+
+        // Write the slug map to a file for debugging
+        var slugMapJson = JsonSerializer.Serialize(slugMap, _jsonSerializerOptions);
+        File.WriteAllText("out/slugMap.json", slugMapJson);
+
+        _logger.LogInformation("Slug map built with {Count} entries", slugMap.Count);
         return slugMap;
     }
 
-    private async Task<(
-        Dictionary<string, PokemonSpecies> SpeciesMap,
-        Dictionary<string, Pokemon> PokemonMap,
-        List<PokemonForm> Forms
-    )> FetchPokemonDataAsync(CancellationToken stoppingToken)
+    private async Task FetchPokemonDataAsync(CancellationToken stoppingToken)
     {
         var offset = _apiOptions.Value.Offset;
         var limit = _apiOptions.Value.Limit;
@@ -126,13 +172,16 @@ public class SpriteDownloader : BackgroundService
             BatchSize,
             stoppingToken
         );
-        var speciesMap = speciesJson
+        _speciesMap = speciesJson
             .Select(json => JsonSerializer.Deserialize<PokemonSpecies>(json)!)
             .ToDictionary(specie => specie.Name!);
 
+        _speciesIdMap = _speciesMap
+            .ToDictionary(specie => specie.Value.Id, specie => specie.Value);
+
         // Fetch Pokémon details from the species varieties
         _logger.LogInformation("Fetching Pokemon details for {Count} Pokemon", speciesList.Count);
-        var pokemonUrls = speciesMap
+        var pokemonUrls = _speciesMap
             .Values.SelectMany(specie => specie.Varieties!.Select(variant => variant.Pokemon!.Url))
             .ToList();
         var pokemonJson = await ProcessInBatchesAsync(
@@ -141,13 +190,13 @@ public class SpriteDownloader : BackgroundService
             BatchSize,
             stoppingToken
         );
-        var pokemonMap = pokemonJson
+        _pokemonMap = pokemonJson
             .Select(json => JsonSerializer.Deserialize<Pokemon>(json)!)
             .ToDictionary(pokemon => pokemon.Name!);
 
         // Fetch forms for each Pokémon
-        _logger.LogInformation("Fetching forms for {Count} Pokemon", pokemonMap.Count);
-        var formUrls = pokemonMap
+        _logger.LogInformation("Fetching forms for {Count} Pokemon", _pokemonMap.Count);
+        var formUrls = _pokemonMap
             .Values.SelectMany(pokemon => pokemon.Forms!.Select(form => form.Url))
             .ToList();
         var formJson = await ProcessInBatchesAsync(
@@ -156,11 +205,62 @@ public class SpriteDownloader : BackgroundService
             BatchSize,
             stoppingToken
         );
-        var forms = formJson
+        _forms = formJson
             .Select(json => JsonSerializer.Deserialize<PokemonForm>(json)!)
-            .ToList();
+            .ToDictionary(form => form.Name!);
 
-        return (speciesMap, pokemonMap, forms);
+        _speciesPokemonMap = _speciesMap
+            .GroupBy(specie => specie.Value.Name!)
+            .ToDictionary(
+                group => group.Key,
+                group => group.SelectMany(specie => specie.Value.Varieties!)
+                    .Select(variant => _pokemonMap[variant.Pokemon!.Name!])
+                    .ToList()
+            );
+
+        _pokemonFormsMap = _forms.Values
+            .GroupBy(form => form.Pokemon!.Name!)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToList()
+            );
+
+        // Write maps to JSON files for debugging
+        await File.WriteAllTextAsync(
+            "out/speciesMap.json",
+            JsonSerializer.Serialize(_speciesMap, _jsonSerializerOptions),
+            stoppingToken
+        );
+
+        await File.WriteAllTextAsync(
+            "out/speciesIdMap.json",
+            JsonSerializer.Serialize(_speciesIdMap, _jsonSerializerOptions),
+            stoppingToken
+        );
+
+        await File.WriteAllTextAsync(
+            "out/pokemonMap.json",
+            JsonSerializer.Serialize(_pokemonMap, _jsonSerializerOptions),
+            stoppingToken
+        );
+
+        await File.WriteAllTextAsync(
+            "out/forms.json",
+            JsonSerializer.Serialize(_forms, _jsonSerializerOptions),
+            stoppingToken
+        );
+
+        await File.WriteAllTextAsync(
+            "out/speciesPokemonMap.json",
+            JsonSerializer.Serialize(_speciesPokemonMap, _jsonSerializerOptions),
+            stoppingToken
+        );
+
+        await File.WriteAllTextAsync(
+            "out/pokemonFormsMap.json",
+            JsonSerializer.Serialize(_pokemonFormsMap, _jsonSerializerOptions),
+            stoppingToken
+        );
     }
 
     private async Task<string> FetchFromApiAsync(string url, CancellationToken stoppingToken)
@@ -229,57 +329,8 @@ public class SpriteDownloader : BackgroundService
         return results;
     }
 
-    private List<DownloadItem> CreateDownloadItems(Dictionary<int, List<string>> slugMap)
-    {
-        var offset = _apiOptions.Value.Offset;
-        var limit = _apiOptions.Value.Limit;
-        var bruteForce = _apiOptions.Value.BruteForce;
-
-        var result = Enumerable
-            .Range(offset, limit)
-            .Where(slugMap.ContainsKey)
-            .SelectMany(dexId =>
-                Enumerable
-                    .Range(0, bruteForce ? 100 : slugMap[dexId].Count)
-                    .SelectMany(formId =>
-                        Enumerable
-                            .Range(0, bruteForce ? 10 : 1)
-                            .Select(styleId => new DownloadItem(dexId, formId, styleId))
-                    )
-            )
-            .ToList();
-
-        return result;
-    }
-
-    private async Task DownloadAllSpritesAsync(
-        Dictionary<int, List<string>> slugMap,
-        CancellationToken stoppingToken
-    )
-    {
-        var downloadItems = CreateDownloadItems(slugMap);
-        _logger.LogInformation("Created {Count} download items", downloadItems.Count);
-
-        // Use the universal batch processing method with void result (using Task<bool>)
-        await ProcessInBatchesAsync(
-            downloadItems,
-            async item =>
-            {
-                await DownloadSpriteAsync(
-                    item.DexNum,
-                    item.FormNum,
-                    item.StyleNum,
-                    slugMap,
-                    stoppingToken
-                );
-                return true;
-            },
-            BatchSize,
-            stoppingToken
-        );
-    }
-
     private async Task DownloadSpriteAsync(
+        bool isDefault,
         int dexNum,
         int formNum,
         int styleNum,
@@ -298,7 +349,8 @@ public class SpriteDownloader : BackgroundService
         var formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
         var extension = _imageConverter.GetFileExtension();
         var fileName =
-            formNum == 0
+            // formNum == 0
+            isDefault
                 ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}{extension}")
                 : Path.Combine(
                     SpritesDirectory,
@@ -393,6 +445,4 @@ public class SpriteDownloader : BackgroundService
         _cache[path] = content;
         await File.WriteAllTextAsync(path, content, stoppingToken);
     }
-
-    private record DownloadItem(int DexNum, int FormNum, int StyleNum);
 }
