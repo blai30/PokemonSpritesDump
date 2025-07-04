@@ -114,7 +114,7 @@ public class SpriteDownloader : BackgroundService
 
             if (!slugMap.ContainsKey(dexNum))
             {
-                slugMap[dexNum] = new List<string>();
+                slugMap[dexNum] = [];
             }
 
             // if ((bool)pokemon.IsDefault! && (bool)form.IsDefault!)
@@ -123,7 +123,7 @@ public class SpriteDownloader : BackgroundService
             // }
             // else
             // {
-                slugMap[dexNum].Add(form.Name!);
+            slugMap[dexNum].Add(form.Name!);
             // }
         }
 
