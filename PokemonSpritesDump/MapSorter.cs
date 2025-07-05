@@ -80,5 +80,12 @@ public static class MapSorter
                     "zygarde-complete",
                 ]
             },
+            {
+                925,
+                [
+                    "maushold-family-of-three",
+                    "maushold-family-of-four",
+                ]
+            },
         };
 }
