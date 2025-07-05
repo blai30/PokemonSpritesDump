@@ -70,5 +70,15 @@ public static class MapSorter
                     "vivillon-poke-ball",
                 ]
             },
+            {
+                718,
+                [
+                    "zygarde-50",
+                    "zygarde-10",
+                    "zygarde-50-power-construct",
+                    "zygarde-10-power-construct",
+                    "zygarde-complete",
+                ]
+            },
         };
 }

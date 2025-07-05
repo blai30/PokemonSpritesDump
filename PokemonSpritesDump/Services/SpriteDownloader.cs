@@ -226,41 +226,41 @@ public class SpriteDownloader : BackgroundService
             );
 
         // Write maps to JSON files for debugging
-        await File.WriteAllTextAsync(
-            "out/speciesMap.json",
-            JsonSerializer.Serialize(_speciesMap, _jsonSerializerOptions),
-            stoppingToken
-        );
-
-        await File.WriteAllTextAsync(
-            "out/speciesIdMap.json",
-            JsonSerializer.Serialize(_speciesIdMap, _jsonSerializerOptions),
-            stoppingToken
-        );
-
-        await File.WriteAllTextAsync(
-            "out/pokemonMap.json",
-            JsonSerializer.Serialize(_pokemonMap, _jsonSerializerOptions),
-            stoppingToken
-        );
-
-        await File.WriteAllTextAsync(
-            "out/forms.json",
-            JsonSerializer.Serialize(_forms, _jsonSerializerOptions),
-            stoppingToken
-        );
-
-        await File.WriteAllTextAsync(
-            "out/speciesPokemonMap.json",
-            JsonSerializer.Serialize(_speciesPokemonMap, _jsonSerializerOptions),
-            stoppingToken
-        );
-
-        await File.WriteAllTextAsync(
-            "out/pokemonFormsMap.json",
-            JsonSerializer.Serialize(_pokemonFormsMap, _jsonSerializerOptions),
-            stoppingToken
-        );
+        // await File.WriteAllTextAsync(
+        //     "out/speciesMap.json",
+        //     JsonSerializer.Serialize(_speciesMap, _jsonSerializerOptions),
+        //     stoppingToken
+        // );
+        //
+        // await File.WriteAllTextAsync(
+        //     "out/speciesIdMap.json",
+        //     JsonSerializer.Serialize(_speciesIdMap, _jsonSerializerOptions),
+        //     stoppingToken
+        // );
+        //
+        // await File.WriteAllTextAsync(
+        //     "out/pokemonMap.json",
+        //     JsonSerializer.Serialize(_pokemonMap, _jsonSerializerOptions),
+        //     stoppingToken
+        // );
+        //
+        // await File.WriteAllTextAsync(
+        //     "out/forms.json",
+        //     JsonSerializer.Serialize(_forms, _jsonSerializerOptions),
+        //     stoppingToken
+        // );
+        //
+        // await File.WriteAllTextAsync(
+        //     "out/speciesPokemonMap.json",
+        //     JsonSerializer.Serialize(_speciesPokemonMap, _jsonSerializerOptions),
+        //     stoppingToken
+        // );
+        //
+        // await File.WriteAllTextAsync(
+        //     "out/pokemonFormsMap.json",
+        //     JsonSerializer.Serialize(_pokemonFormsMap, _jsonSerializerOptions),
+        //     stoppingToken
+        // );
     }
 
     private async Task<string> FetchFromApiAsync(string url, CancellationToken stoppingToken)
