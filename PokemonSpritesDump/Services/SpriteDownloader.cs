@@ -9,6 +9,7 @@ namespace PokemonSpritesDump.Services;
 public class SpriteDownloader : BackgroundService
 {
     private const string SpritesDirectory = "out/sprites";
+    private const string ItemsDirectory = "out/items";
     private const string CacheDirectory = "out/cache";
     private const int BatchSize = 20;
     private readonly ConcurrentDictionary<string, string> _cache = new();
@@ -55,6 +56,7 @@ public class SpriteDownloader : BackgroundService
         _httpClient.Timeout = TimeSpan.FromMinutes(2);
 
         Directory.CreateDirectory(SpritesDirectory);
+        Directory.CreateDirectory(ItemsDirectory);
         Directory.CreateDirectory(CacheDirectory);
     }
 
@@ -67,6 +69,11 @@ public class SpriteDownloader : BackgroundService
         _logger.LogInformation("Downloading all sprites...");
         await DownloadAllSpritesAsync(slugMap, stoppingToken);
         _logger.LogInformation("Sprite download completed");
+
+        _logger.LogInformation("Downloading items...");
+        var itemSlugs = MapSorter.ItemSlugs;
+        await DownloadItemsAsync(itemSlugs, stoppingToken);
+        _logger.LogInformation("Item download completed");
     }
 
     private async Task DownloadAllSpritesAsync(Dictionary<int, List<string>> slugMap, CancellationToken stoppingToken)
@@ -128,7 +135,7 @@ public class SpriteDownloader : BackgroundService
         }
 
         // Use MapSorter.SlugOrdering to ensure correct order of applicable form slugs.
-        foreach (var (dexNum, slugs) in MapSorter.SlugOrdering)
+        foreach (var (dexNum, slugs) in MapSorter.PokemonSlugs)
         {
             if (slugMap.TryGetValue(dexNum, out var existingSlugs))
             {
@@ -357,6 +364,38 @@ public class SpriteDownloader : BackgroundService
                     $"sprite_{dexId}_{formSlug}_s{styleId}{extension}"
                 );
 
+        await DownloadAndProcessImageAsync(imageUrl, imageCacheFile, fileName, stoppingToken);
+    }
+
+    private async Task DownloadItemsAsync(List<string> slugs, CancellationToken stoppingToken)
+    {
+        // Indices for the items (often you can start with 1; adjust if needed)
+        var indices = Enumerable.Range(1, 2000);
+
+        // Use your batch processor to download items in parallel batches
+        await ProcessInBatchesAsync(indices, async i =>
+        {
+            await Process(i);
+            return true;
+        }, BatchSize, stoppingToken);
+        return;
+
+        // Create per-item processing function
+        async Task Process(int i)
+        {
+            var url = $"https://resource.pokemon-home.com/battledata/img/item/item_{i:D4}.png";
+            var cacheFile = Path.Combine(CacheDirectory, $"item_{i:D4}.png");
+            var fileName = Path.Combine(ItemsDirectory, $"item_{i:D4}.webp");
+            await DownloadAndProcessImageAsync(url, cacheFile, fileName, stoppingToken);
+        }
+    }
+
+    private async Task DownloadAndProcessImageAsync(
+        string imageUrl,
+        string imageCacheFile,
+        string fileName,
+        CancellationToken stoppingToken)
+    {
         if (File.Exists(fileName))
         {
             _logger.LogDebug("File already exists, skipping: {FileName}", fileName);
