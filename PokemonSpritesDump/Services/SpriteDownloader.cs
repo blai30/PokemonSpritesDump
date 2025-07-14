@@ -81,7 +81,6 @@ public class SpriteDownloader : BackgroundService
         for (var i = slugMap.Keys.Min(); i <= slugMap.Keys.Max(); i++)
         {
             stoppingToken.ThrowIfCancellationRequested();
-
             if (!slugMap.TryGetValue(i, out var forms))
             {
                 _logger.LogWarning("No forms found for dex number {DexNum}", i);
@@ -90,19 +89,24 @@ public class SpriteDownloader : BackgroundService
 
             for (var j = 0; j < forms.Count; j++)
             {
+                stoppingToken.ThrowIfCancellationRequested();
                 var formSlug = forms[j];
                 var form = formSlug != "egg" ? _forms[formSlug] : null;
                 var pokemon = formSlug != "egg" ? _pokemonMap[form!.Pokemon!.Name!] : null;
                 var isDefault = formSlug == "egg" || (bool)pokemon!.IsDefault! && (bool)form!.IsDefault!;
 
-                _downloadTasks.Add(DownloadSpriteAsync(
-                    isDefault,
-                    i,
-                    j,
-                    0,
-                    slugMap,
-                    stoppingToken
-                ));
+                for (var k = 0; k < 10; k++)
+                {
+                    stoppingToken.ThrowIfCancellationRequested();
+                    _downloadTasks.Add(DownloadSpriteAsync(
+                        isDefault,
+                        i,
+                        j,
+                        k,
+                        slugMap,
+                        stoppingToken
+                    ));
+                }
             }
         }
 
