@@ -87,6 +87,26 @@ public static class MapSorter
                     "maushold-family-of-four",
                 ]
             },
+            {
+                1007,
+                [
+                    "koraidon-apex-build",
+                    "koraidon-sprinting-build",
+                    "koraidon-limited-build",
+                    "koraidon-swimming-build",
+                    "koraidon-gliding-build",
+                ]
+            },
+            {
+                1008,
+                [
+                    "miraidon-ultimate-mode",
+                    "miraidon-drive-mode",
+                    "miraidon-low-power-mode",
+                    "miraidon-aquatic-mode",
+                    "miraidon-glide-mode",
+                ]
+            },
         };
 
     public static List<string> ItemSlugs =>

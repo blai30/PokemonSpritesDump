@@ -420,7 +420,7 @@ public class SpriteDownloader : BackgroundService
             else
             {
                 // Download the image
-                var response = await _httpClient.GetAsync(imageUrl, stoppingToken);
+                using var response = await _httpClient.GetAsync(imageUrl, stoppingToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
