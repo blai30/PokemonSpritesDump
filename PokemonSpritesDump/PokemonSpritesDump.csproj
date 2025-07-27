@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-PokemonSpritesDump-f7f45e27-4ef8-4ca7-b7f5-4ed833433068</UserSecretsId>
+        <LangVersion>13</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>

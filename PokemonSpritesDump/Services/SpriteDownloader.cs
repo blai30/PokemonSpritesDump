@@ -371,13 +371,10 @@ public class SpriteDownloader : BackgroundService
         await DownloadAndProcessImageAsync(imageUrl, imageCacheFile, fileName, stoppingToken);
     }
 
-    private async Task DownloadItemsAsync(List<string> slugs, CancellationToken stoppingToken)
+    private async Task DownloadItemsAsync(Dictionary<int, string> slugs, CancellationToken stoppingToken)
     {
-        // Indices for the items (often you can start with 1; adjust if needed)
-        var indices = Enumerable.Range(1, 2000);
-
         // Use your batch processor to download items in parallel batches
-        await ProcessInBatchesAsync(indices, async i =>
+        await ProcessInBatchesAsync(slugs.Keys, async i =>
         {
             await Process(i);
             return true;
@@ -389,7 +386,7 @@ public class SpriteDownloader : BackgroundService
         {
             var url = $"https://resource.pokemon-home.com/battledata/img/item/item_{i:D4}.png";
             var cacheFile = Path.Combine(CacheDirectory, $"item_{i:D4}.png");
-            var fileName = Path.Combine(ItemsDirectory, $"item_{i:D4}.webp");
+            var fileName = Path.Combine(ItemsDirectory, $"item_{slugs[i]}.webp");
             await DownloadAndProcessImageAsync(url, cacheFile, fileName, stoppingToken);
         }
     }

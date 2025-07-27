@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace PokemonSpritesDump;
 
 public static class MapSorter
@@ -109,144 +111,138 @@ public static class MapSorter
             },
         };
 
-    public static List<string> ItemSlugs =>
-    [
-        "", // 0
-        "master-ball", // 1
-        "ultra-ball", // 2
-        "great-ball", // 3
-        "poke-ball", // 4
-        "safari-ball", // 5
-        "net-ball", // 6
-        "dive-ball", // 7
-        "nest-ball", // 8
-        "repeat-ball", // 9
-        "timer-ball", // 10
-        "luxury-ball", // 11
-        "premier-ball", // 12
-        "dusk-ball", // 13
-        "heal-ball", // 14
-        "quick-ball", // 15
-        "cherish-ball", // 16
-        "potion", // 17
-        "antidote", // 18
-        "burn-heal", // 19
-        "ice-heal", // 20
-        "awakening", // 21
-        "paralyze-heal", // 22
-        "full-restore", // 23
-        "max-potion", // 24
-        "hyper-potion", // 25
-        "super-potion", // 26
-        "full-heal", // 27
-        "revive", // 28
-        "max-revive", // 29
-        "fresh-water", // 30
-        "soda-pop", // 31
-        "lemonade", // 32
-        "moomoo-milk", // 33
-        "energy-powder", // 34
-        "energy-root", // 35
-        "heal-powder", // 36
-        "revival-herb", // 37
-        "ether", // 38
-        "max-ether", // 39
-        "elixir", // 40
-        "max-elixir", // 41
-        "", // 42
-        "", // 43
-        "", // 44
-        "hp-up", // 45
-        "protein", // 46
-        "iron", // 47
-        "carbos", // 48
-        "calcium", // 49
-        "rare-candy", // 50
-        "pp-up", // 51
-        "zinc", // 52
-        "pp-max", // 53
-        "", // 54
-        "guard-spec", // 55
-        "dire-hit", // 56
-        "x-attack", // 57
-        "x-defense", // 58
-        "x-speed", // 59
-        "x-accuracy", // 60
-        "x-sp-attack", // 61
-        "x-sp-defense", // 62
-        "poke-doll", // 63
-        "", // 64
-        "", // 65
-        "", // 66
-        "", // 67
-        "", // 68
-        "", // 69
-        "", // 70
-        "", // 71
-        "", // 72
-        "", // 73
-        "", // 74
-        "", // 75
-        "super-repel", // 76
-        "max-repel", // 77
-        "escape-rope", // 78
-        "repel", // 79
-        "sun-stone", // 80
-        "moon-stone", // 81
-        "fire-stone", // 82
-        "thunder-stone", // 83
-        "water-stone", // 84
-        "leaf-stone", // 85
-        "tiny-mushroom", // 86
-        "big-mushroom", // 87
-        "pearl", // 88
-        "big-pearl", // 89
-        "stardust", // 90
-        "star-piece", // 91
-        "nugget", // 92
-        "", // 93
-        "honey", // 94
-        "", // 95
-        "", // 96
-        "", // 97
-        "", // 98
-        "", // 99
-        "", // 100
-        "", // 101
-        "", // 102
-        "", // 103
-        "", // 104
-        "", // 105
-        "rare-bone", // 106
-        "shiny-stone", // 107
-        "dusk-stone", // 108
-        "dawn-stone", // 109
-        "oval-stone", // 110
-        "odd-keystone", // 111
-        "griseous-orb", // 112
-        "", // 113
-        "", // 114
-        "", // 115
-        "", // 116
-        "", // 117
-        "", // 118
-        "", // 119
-        "", // 120
-        "", // 121
-        "", // 122
-        "", // 123
-        "", // 124
-        "", // 125
-        "", // 126
-        "", // 127
-        "", // 128
-        "", // 129
-        "", // 130
-        "", // 131
-        "", // 132
-        "", // 133
-        "", // 134
-        "adamant-orb", // 135
-        "lustrous-orb", // 136
-    ];
+    public static Dictionary<int, string> ItemSlugs => new()
+    {
+        { 1, "master-ball" },
+        { 2, "ultra-ball" },
+        { 3, "great-ball" },
+        { 4, "poke-ball" },
+        { 5, "safari-ball" },
+        { 6, "net-ball" },
+        { 7, "dive-ball" },
+        { 8, "nest-ball" },
+        { 9, "repeat-ball" },
+        { 10, "timer-ball" },
+        { 11, "luxury-ball" },
+        { 12, "premier-ball" },
+        { 13, "dusk-ball" },
+        { 14, "heal-ball" },
+        { 15, "quick-ball" },
+        { 16, "cherish-ball" },
+        { 17, "potion" },
+        { 18, "antidote" },
+        { 19, "burn-heal" },
+        { 20, "ice-heal" },
+        { 21, "awakening" },
+        { 22, "paralyze-heal" },
+        { 23, "full-restore" },
+        { 24, "max-potion" },
+        { 25, "hyper-potion" },
+        { 26, "super-potion" },
+        { 27, "full-heal" },
+        { 28, "revive" },
+        { 29, "max-revive" },
+        { 30, "fresh-water" },
+        { 31, "soda-pop" },
+        { 32, "lemonade" },
+        { 33, "moomoo-milk" },
+        { 34, "energy-powder" },
+        { 35, "energy-root" },
+        { 36, "heal-powder" },
+        { 37, "revival-herb" },
+        { 38, "ether" },
+        { 39, "max-ether" },
+        { 40, "elixir" },
+        { 41, "max-elixir" },
+        { 45, "hp-up" },
+        { 46, "protein" },
+        { 47, "iron" },
+        { 48, "carbos" },
+        { 49, "calcium" },
+        { 50, "rare-candy" },
+        { 51, "pp-up" },
+        { 52, "zinc" },
+        { 53, "pp-max" },
+        { 55, "guard-spec" },
+        { 56, "dire-hit" },
+        { 57, "x-attack" },
+        { 58, "x-defense" },
+        { 59, "x-speed" },
+        { 60, "x-accuracy" },
+        { 61, "x-sp-attack" },
+        { 62, "x-sp-defense" },
+        { 63, "poke-doll" },
+        { 76, "super-repel" },
+        { 77, "max-repel" },
+        { 78, "escape-rope" },
+        { 79, "repel" },
+        { 80, "sun-stone" },
+        { 81, "moon-stone" },
+        { 82, "fire-stone" },
+        { 83, "thunder-stone" },
+        { 84, "water-stone" },
+        { 85, "leaf-stone" },
+        { 86, "tiny-mushroom" },
+        { 87, "big-mushroom" },
+        { 88, "pearl" },
+        { 89, "big-pearl" },
+        { 90, "stardust" },
+        { 91, "star-piece" },
+        { 92, "nugget" },
+        { 94, "honey" },
+        { 106, "rare-bone" },
+        { 107, "shiny-stone" },
+        { 108, "dusk-stone" },
+        { 109, "dawn-stone" },
+        { 110, "oval-stone" },
+        { 111, "odd-keystone" },
+        { 112, "griseous-orb" },
+        { 135, "adamant-orb" },
+        { 136, "lustrous-orb" },
+        { 149, "cheri-berry" },
+        { 150, "chesto-berry" },
+        { 151, "pecha-berry" },
+        { 152, "rawst-berry" },
+        { 153, "aspear-berry" },
+        { 154, "leppa-berry" },
+        { 155, "oran-berry" },
+        { 156, "persim-berry" },
+        { 157, "lum-berry" },
+        { 158, "sitrus-berry" },
+        { 159, "figy-berry" },
+        { 160, "wiki-berry" },
+        { 161, "mago-berry" },
+        { 162, "aguav-berry" },
+        { 163, "iapapa-berry" },
+        { 164, "razz-berry" },
+        { 165, "bluk-berry" },
+        { 166, "nanab-berry" },
+        { 167, "wepear-berry" },
+        { 168, "pinap-berry" },
+        { 169, "pomeg-berry" },
+        { 170, "kelpsy-berry" },
+        { 171, "qualot-berry" },
+        { 172, "hondew-berry" },
+        { 173, "grepa-berry" },
+        { 174, "tamato-berry" },
+        { 175, "cornn-berry" },
+        { 176, "magob-berry" },
+        { 177, "rabuta-berry" },
+        { 178, "nomel-berry" },
+        { 179, "spelon-berry" },
+        { 180, "pamtre-berry" },
+        { 181, "watmel-berry" },
+        { 182, "durin-berry" },
+        { 183, "belue-berry" },
+        { 184, "occa-berry" },
+        { 185, "passho-berry" },
+        { 186, "wacan-berry" },
+        { 187, "rindo-berry" },
+        { 188, "yache-berry" },
+        { 189, "chople-berry" },
+        { 190, "kebia-berry" },
+        { 191, "shuca-berry" },
+        { 192, "coba-berry" },
+        { 193, "payapa-berry" },
+    };
 }
