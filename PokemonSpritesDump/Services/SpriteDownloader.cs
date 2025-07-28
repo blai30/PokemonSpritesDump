@@ -74,43 +74,10 @@ public class SpriteDownloader : BackgroundService
         var itemSlugs = MapSorter.ItemSlugs;
         await DownloadItemsAsync(itemSlugs, stoppingToken);
         _logger.LogInformation("Item download completed");
-    }
 
-    private async Task DownloadAllSpritesAsync(Dictionary<int, List<string>> slugMap, CancellationToken stoppingToken)
-    {
-        for (var i = slugMap.Keys.Min(); i <= slugMap.Keys.Max(); i++)
-        {
-            stoppingToken.ThrowIfCancellationRequested();
-            if (!slugMap.TryGetValue(i, out var forms))
-            {
-                _logger.LogWarning("No forms found for dex number {DexNum}", i);
-                continue;
-            }
-
-            for (var j = 0; j < forms.Count; j++)
-            {
-                stoppingToken.ThrowIfCancellationRequested();
-                var formSlug = forms[j];
-                var form = formSlug != "egg" ? _forms[formSlug] : null;
-                var pokemon = formSlug != "egg" ? _pokemonMap[form!.Pokemon!.Name!] : null;
-                var isDefault = formSlug == "egg" || (bool)pokemon!.IsDefault! && (bool)form!.IsDefault!;
-
-                for (var k = 0; k < 10; k++)
-                {
-                    stoppingToken.ThrowIfCancellationRequested();
-                    _downloadTasks.Add(DownloadSpriteAsync(
-                        isDefault,
-                        i,
-                        j,
-                        k,
-                        slugMap,
-                        stoppingToken
-                    ));
-                }
-            }
-        }
-
-        await Task.WhenAll(_downloadTasks);
+        // _logger.LogInformation("Downloading images with original filenames...");
+        // await DownloadAllOriginalSpritesAsync(stoppingToken);
+        // await DownloadOriginalItemsAsync(stoppingToken);
     }
 
     private Dictionary<int, List<string>> BuildSlugMapAsync(CancellationToken stoppingToken)
@@ -300,6 +267,147 @@ public class SpriteDownloader : BackgroundService
         return apiContent;
     }
 
+    private async Task DownloadAllSpritesAsync(Dictionary<int, List<string>> slugMap, CancellationToken stoppingToken)
+    {
+        for (var i = slugMap.Keys.Min(); i <= slugMap.Keys.Max(); i++)
+        {
+            stoppingToken.ThrowIfCancellationRequested();
+            if (!slugMap.TryGetValue(i, out var forms))
+            {
+                _logger.LogWarning("No forms found for dex number {DexNum}", i);
+                continue;
+            }
+
+            for (var j = 0; j < forms.Count; j++)
+            {
+                stoppingToken.ThrowIfCancellationRequested();
+                var formSlug = forms[j];
+                var form = formSlug != "egg" ? _forms[formSlug] : null;
+                var pokemon = formSlug != "egg" ? _pokemonMap[form!.Pokemon!.Name!] : null;
+                var isDefault = formSlug == "egg" || (bool)pokemon!.IsDefault! && (bool)form!.IsDefault!;
+
+                for (var k = 0; k < 10; k++)
+                {
+                    stoppingToken.ThrowIfCancellationRequested();
+                    _downloadTasks.Add(DownloadSpriteAsync(
+                        isDefault,
+                        i,
+                        j,
+                        k,
+                        slugMap,
+                        stoppingToken
+                    ));
+                }
+            }
+        }
+
+        await Task.WhenAll(_downloadTasks);
+    }
+
+    private async Task DownloadAllOriginalSpritesAsync(CancellationToken stoppingToken)
+    {
+        Directory.CreateDirectory("out/original-sprites");
+        var spriteUrls = new List<(string imageUrl, string cacheFile, string fileName)>();
+
+        for (var i = 0; i < 1040; i++)
+        {
+            for (var j = 0; j < 30; j++)
+            {
+                for (var k = 0; k < 4; k++)
+                {
+                    var imageUrl =
+                        $"https://resource.pokemon-home.com/battledata/img/pokei128/icon{i:D4}_f{j:D2}_s{k:D1}.png";
+                    var imageCacheFile = Path.Combine(CacheDirectory, $"icon{i:D4}_f{j:D2}_s{k:D1}.png");
+                    var extension = _imageConverter.GetFileExtension();
+                    var fileName = Path.Combine("out/original-sprites", $"icon{i:D4}_f{j:D2}_s{k:D1}{extension}");
+                    spriteUrls.Add((imageUrl, imageCacheFile, fileName));
+                }
+            }
+        }
+
+        await ProcessInBatchesAsync(spriteUrls, async item =>
+        {
+            await DownloadAndProcessImageAsync(item.imageUrl, item.cacheFile, item.fileName, stoppingToken);
+            return true;
+        }, BatchSize, stoppingToken);
+    }
+
+    private async Task DownloadSpriteAsync(
+        bool isDefault,
+        int dexNum,
+        int formNum,
+        int styleNum,
+        Dictionary<int, List<string>> slugMap,
+        CancellationToken stoppingToken
+    )
+    {
+        var dexId = dexNum.ToString("D4");
+        var formId = formNum.ToString("D2");
+        var styleId = styleNum.ToString("D1");
+
+        var imageUrl =
+            $"https://resource.pokemon-home.com/battledata/img/pokei128/icon{dexId}_f{formId}_s{styleId}.png";
+        var imageCacheFile = Path.Combine(CacheDirectory, $"icon{dexId}_f{formId}_s{styleId}.png");
+
+        var formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
+        var extension = _imageConverter.GetFileExtension();
+        var fileName =
+            // formNum == 0
+            isDefault
+                ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}{extension}")
+                : Path.Combine(
+                    SpritesDirectory,
+                    $"sprite_{dexId}_{formSlug}_s{styleId}{extension}"
+                );
+
+        await DownloadAndProcessImageAsync(imageUrl, imageCacheFile, fileName, stoppingToken);
+    }
+
+    private async Task DownloadItemsAsync(Dictionary<int, List<string>> slugs, CancellationToken stoppingToken)
+    {
+        // Use your batch processor to download items in parallel batches
+        await ProcessInBatchesAsync(slugs.Keys, async i =>
+        {
+            await Process(i);
+            return true;
+        }, BatchSize, stoppingToken);
+        return;
+
+        // Create per-item processing function
+        async Task Process(int i)
+        {
+            var url = $"https://resource.pokemon-home.com/battledata/img/item/item_{i:D4}.png";
+            var cacheFile = Path.Combine(CacheDirectory, $"item_{i:D4}.png");
+
+            foreach (var fileName in slugs[i].Select(slug => Path.Combine(ItemsDirectory, $"item_{slug}.webp")))
+            {
+                await DownloadAndProcessImageAsync(url, cacheFile, fileName, stoppingToken);
+            }
+        }
+    }
+
+    private async Task DownloadOriginalItemsAsync(CancellationToken stoppingToken)
+    {
+        Directory.CreateDirectory("out/original-items");
+        // Use your batch processor to download items in parallel batches
+        var ids = Enumerable.Range(0, 9999);
+        await ProcessInBatchesAsync(ids, async i =>
+        {
+            await Process(i);
+            return true;
+        }, BatchSize, stoppingToken);
+        return;
+
+        // Create per-item processing function
+        async Task Process(int i)
+        {
+            var url = $"https://resource.pokemon-home.com/battledata/img/item/item_{i:D4}.png";
+            var cacheFile = Path.Combine(CacheDirectory, $"item_{i:D4}.png");
+            var fileName = Path.Combine("out/original-items", $"item_{i:D4}.png");
+            await DownloadAndProcessImageAsync(url, cacheFile, fileName, stoppingToken);
+        }
+    }
+
     /// <summary>
     ///     Processes a collection of items in batches with progress reporting
     /// </summary>
@@ -338,62 +446,6 @@ public class SpriteDownloader : BackgroundService
         }
 
         return results;
-    }
-
-    private async Task DownloadSpriteAsync(
-        bool isDefault,
-        int dexNum,
-        int formNum,
-        int styleNum,
-        Dictionary<int, List<string>> slugMap,
-        CancellationToken stoppingToken
-    )
-    {
-        var dexId = dexNum.ToString("D4");
-        var formId = formNum.ToString("D2");
-        var styleId = styleNum.ToString("D1");
-
-        var imageUrl =
-            $"https://resource.pokemon-home.com/battledata/img/pokei128/icon{dexId}_f{formId}_s{styleId}.png";
-        var imageCacheFile = Path.Combine(CacheDirectory, $"icon{dexId}_f{formId}_s{styleId}.png");
-
-        var formSlug = formNum < slugMap[dexNum].Count ? slugMap[dexNum][formNum] : formId;
-        var extension = _imageConverter.GetFileExtension();
-        var fileName =
-            // formNum == 0
-            isDefault
-                ? Path.Combine(SpritesDirectory, $"sprite_{dexId}_s{styleId}{extension}")
-                : Path.Combine(
-                    SpritesDirectory,
-                    $"sprite_{dexId}_{formSlug}_s{styleId}{extension}"
-                );
-
-        await DownloadAndProcessImageAsync(imageUrl, imageCacheFile, fileName, stoppingToken);
-    }
-
-    private async Task DownloadItemsAsync(Dictionary<int, List<string>> slugs, CancellationToken stoppingToken)
-    {
-        // var ids = Enumerable.Range(0, 9999);
-        // await ProcessInBatchesAsync(ids, async i =>
-        // Use your batch processor to download items in parallel batches
-        await ProcessInBatchesAsync(slugs.Keys, async i =>
-        {
-            await Process(i);
-            return true;
-        }, BatchSize, stoppingToken);
-        return;
-
-        // Create per-item processing function
-        async Task Process(int i)
-        {
-            var url = $"https://resource.pokemon-home.com/battledata/img/item/item_{i:D4}.png";
-            var cacheFile = Path.Combine(CacheDirectory, $"item_{i:D4}.png");
-
-            foreach (var fileName in slugs[i].Select(slug => Path.Combine(ItemsDirectory, $"item_{slug}.webp")))
-            {
-                await DownloadAndProcessImageAsync(url, cacheFile, fileName, stoppingToken);
-            }
-        }
     }
 
     private async Task DownloadAndProcessImageAsync(
