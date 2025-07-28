@@ -47,6 +47,14 @@ public static class MapSorter
                 ]
             },
             {
+                646,
+                [
+                    "kyurem",
+                    "kyurem-black",
+                    "kyurem-white",
+                ]
+            },
+            {
                 666,
                 [
                     "vivillon-icy-snow",
